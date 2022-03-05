@@ -1,0 +1,16 @@
+03/01/2022, 06:56 || Member "4000" not found.
+03/01/2022, 07:08 || Member "400" not found.
+03/01/2022, 07:37 || num1 is a required argument that is missing.
+03/01/2022, 07:51 || You are on cooldown. Try again in 28.45s
+03/01/2022, 07:51 || You are on cooldown. Try again in 15.61s
+03/01/2022, 07:59 || You are on cooldown. Try again in 24.21s
+03/01/2022, 07:59 || You are on cooldown. Try again in 23.50s
+03/01/2022, 07:59 || You are on cooldown. Try again in 21.67s
+03/01/2022, 07:59 || You are on cooldown. Try again in 19.90s
+03/01/2022, 07:59 || You are on cooldown. Try again in 19.14s
+03/01/2022, 07:59 || You are on cooldown. Try again in 18.52s
+03/01/2022, 07:59 || You are on cooldown. Try again in 17.50s
+03/01/2022, 08:04 || You are missing Ban Members permission(s) to run this command.
+03/01/2022, 10:53 || You are missing Ban Members permission(s) to run this command.
+03/01/2022, 08:58 || You are on cooldown. Try again in 10.20s
+03/04/2022, 07:31 || Command raised an exception: AttributeError: 'Member' object has no attribute 'avatar_url'
