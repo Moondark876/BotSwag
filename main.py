@@ -38,21 +38,6 @@ def get_prefix(client, message):
 client = commands.Bot(command_prefix=(get_prefix), case_insensitive=True, intents=intents)
 client.remove_command('help')
 
-snipe_message_content = {}
-snipe_message_author = {}
-
-
-@client.event
-async def on_message_delete(message):
-    try:
-        snipe_message_author[message.channel.id] = message.author
-        snipe_message_content[message.channel.id] = message.content
-        await asyncio.sleep(60)
-        del snipe_message_author[message.channel.id]
-        del snipe_message_content[message.channel.id]
-    except KeyError:
-        pass
-
 
 @client.event
 async def on_guild_join(guild):
