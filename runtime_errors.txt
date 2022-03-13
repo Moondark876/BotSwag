@@ -14,3 +14,15 @@
 03/01/2022, 10:53 || You are missing Ban Members permission(s) to run this command.
 03/01/2022, 08:58 || You are on cooldown. Try again in 10.20s
 03/04/2022, 07:31 || Command raised an exception: AttributeError: 'Member' object has no attribute 'avatar_url'
+03/05/2022, 01:18 || Command raised an exception: AttributeError: 'Member' object has no attribute 'avatar_url'
+03/05/2022, 01:18 || Command raised an exception: AttributeError: 'Member' object has no attribute 'avatar_url'
+03/05/2022, 01:19 || Command raised an exception: AttributeError: 'Member' object has no attribute 'avatar_url'
+03/05/2022, 02:14 || Command raised an exception: NameError: name 'MainView' is not defined
+03/05/2022, 06:55 || Command raised an exception: TypeError: Next.__init__() missing 1 required positional argument: 'func'
+03/08/2022, 07:56 || Command raised an exception: AttributeError: 'Member' object has no attribute 'avatar_url'
+03/12/2022, 02:18 || Command raised an exception: ValueError: too many values to unpack (expected 2)
+03/12/2022, 02:19 || Command raised an exception: ValueError: too many values to unpack (expected 2)
+03/12/2022, 02:21 || Command raised an exception: ValueError: too many values to unpack (expected 2)
+03/12/2022, 02:22 || Command raised an exception: ValueError: too many values to unpack (expected 2)
+03/12/2022, 02:23 || Command raised an exception: ValueError: too many values to unpack (expected 2)
+03/12/2022, 02:25 || Command raised an exception: ValueError: too many values to unpack (expected 2)

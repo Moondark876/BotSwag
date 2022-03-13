@@ -10,8 +10,8 @@ import discord
 import motor.motor_asyncio
 import requests
 from discord.ext import commands
-from button import Confirm
-
+from button import *
+import aiohttp
 
 intents = discord.Intents.all()
 
@@ -20,7 +20,7 @@ key = os.environ['MONGOKEY']
 cluster = motor.motor_asyncio.AsyncIOMotorClient(key)
 
 
-def get_prefix(client, message):
+def get_prefix(client, message) -> str:
     try:
         with open('prefixes.json', 'r') as f:
             prefixes = json.load(f)
@@ -37,10 +37,15 @@ def get_prefix(client, message):
 
 client = commands.Bot(command_prefix=(get_prefix), case_insensitive=True, intents=intents)
 client.remove_command('help')
+tree = discord.app_commands.CommandTree(client)
+
+for filename in os.listdir('./cogs'):
+    if filename.endswith('.py'):
+        client.load_extension(f'cogs.{filename[:-3]}')
 
 
 @client.event
-async def on_guild_join(guild):
+async def on_guild_join(guild) -> None:
     with open('prefixes.json', 'r') as f:
         prefixes = json.load(f)
 
@@ -51,7 +56,7 @@ async def on_guild_join(guild):
 
 
 @client.event
-async def on_guild_remove(guild):
+async def on_guild_remove(guild) -> None:
     with open('prefixes.json', 'r') as f:
         prefixes = json.load(f)
 
@@ -62,7 +67,7 @@ async def on_guild_remove(guild):
 
 
 @client.event
-async def on_command_error(ctx, error):
+async def on_command_error(ctx, error) -> None:
     if isinstance(error, commands.CommandNotFound):
         await ctx.send(str(error))
     elif isinstance(error, commands.MemberNotFound):
@@ -74,52 +79,42 @@ async def on_command_error(ctx, error):
 
 
 @client.event
-async def on_ready():
+async def on_ready() -> None:
     print(f'My name is {client.user}')
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="my server"))
+    await tree.sync(guild=discord.Object(id=920490332876046336))
 
 
 # Bot Commands
 @client.command()
-async def hello(ctx):
+async def hello(ctx) -> None:
     hello = [f"Yo Fam how ya do {ctx.author.mention}", "k", "...", "sup nerd", "ㅤ"]
     await ctx.send(random.choice(hello))
 
 
 @client.command()
-async def invite(ctx):
+async def invite(ctx) -> None:
     embed = discord.Embed(title="Bot Invite Link",
-                          url="https://discord.com/api/oauth2/authorize?client_id=919279296412020756&permissions=8&scope=bot",
-                          description="https://discord.com/api/oauth2/authorize?client_id=919279296412020756&permissions=8&scope=bot",
+                          url="https://discord.com/api/oauth2/authorize?client_id=919279296412020756&permissions=8"
+                              "&scope=applications.commands%20bot",
+                          description="https://discord.com/api/oauth2/authorize?client_id=919279296412020756"
+                                      "&permissions=8&scope=applications.commands%20bot",
                           color=discord.Color.blue())
     await ctx.send(embed=embed)
 
 
 @client.group(name='help', invoke_without_command=True)
-async def help(ctx):
-    embed = discord.Embed(title="Commands List", description=f"""```
-  hello
-  invite
-  time
-  math
-  rolldice
-  ping```""", color=discord.Color.blue())
+async def help(ctx) -> None:
+    embed = discord.Embed(title="Commands List", color=discord.Color.blue())
     embed.set_footer(text="This bot was made by Moondark876.")
+    for cog, cls in client.cogs.items():
+        cmds = "\n".join([cmd.name for cmd in cls.get_commands()])
+        embed.add_field(name=cog, value=f'*{cls.__doc__}*\n>>> {cmds}', inline=False)
     await ctx.send(embed=embed)
 
 
-@help.command()
-async def hello(ctx):
-    await ctx.send("```hello - sends a random hello message.```")
-
-
-@help.command()
-async def invite(ctx):
-    await ctx.send(f"```invite - sends the invite link for the bot.```")
-
-
 @client.command()
-async def time(ctx):
+async def time(ctx) -> None:
     current_time = datetime.datetime.now()
     if current_time.strftime("%H") <= "12":
         am_pm = "AM"
@@ -130,8 +125,9 @@ async def time(ctx):
     await ctx.send(embed=embed)
 
 
-@client.command()
-async def rolldice(ctx):
+@tree.command()
+async def rolldice(interaction) -> None:
+    """Returns a random number from one to six!"""
     dice = random.randint(1, 6)
     embed = discord.Embed(title=f'You rolled a {dice}!',
                           color=discord.Colour.blue() if dice > 3 else discord.Colour.red())
@@ -147,11 +143,12 @@ async def rolldice(ctx):
         embed.set_image(url='https://cdn.discordapp.com/attachments/778342545431855155/920356610285658122/dice5.png')
     elif dice == 6:
         embed.set_image(url='https://cdn.discordapp.com/attachments/778342545431855155/920356610650554418/dice6.png')
-    await ctx.send(embed=embed)
+    await interaction.response.send(embed=embed)
 
 
-@client.command()
-async def ping(ctx):
+@tree.command(guild=discord.Object(id=920490332876046336))
+async def ping(interaction) -> None:
+    """Get the bot's Latency and Uptime!"""
     current_time = t.time()
     difference = int(round(current_time - start_time))
     text = f"`{str(datetime.timedelta(seconds=difference)).split(':')[0]}hrs`"
@@ -159,13 +156,16 @@ async def ping(ctx):
     embed.add_field(name="Latency", value=f"`{round(client.latency * 1000)}ms`")
     embed.add_field(name='Uptime', value=text)
     try:
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
     except discord.HTTPException:
         pass
 
 
+tree.add_command(ping)
+
+
 @client.command()
-async def math(ctx, num1: float, operand, num2: float):
+async def math(ctx, num1: float, operand, num2: float) -> None:
     if operand == '*':
         await ctx.send(f"Result: `{num1 * num2}`")
 
@@ -181,7 +181,7 @@ async def math(ctx, num1: float, operand, num2: float):
 
 @client.command(pass_context=True)
 @commands.has_permissions(administrator=True)
-async def prefix(ctx, prefix):
+async def prefix(ctx, prefix) -> None:
     with open('prefixes.json', 'r') as f:
         prefixes = json.load(f)
 
@@ -195,7 +195,7 @@ async def prefix(ctx, prefix):
 
 @client.command(pass_context=True)
 @commands.has_permissions(ban_members=True)
-async def ban(ctx, member: discord.Member, *, reason=None):
+async def ban(ctx, member: discord.Member, *, reason=None) -> None:
     if member.id != "748609140896694394":
         await member.ban(reason=reason)
         await ctx.send(f"{member.mention} was banned from the server.")
@@ -205,7 +205,7 @@ async def ban(ctx, member: discord.Member, *, reason=None):
 
 @client.command()
 @commands.has_permissions(administrator=True)
-async def unban(ctx, *, member):
+async def unban(ctx, *, member) -> None:
     banned_users = await ctx.guild.bans()
     member_name, member_discriminator = member.split("#")
 
@@ -219,37 +219,37 @@ async def unban(ctx, *, member):
 
 
 @client.command()
-async def sadge(ctx):
+async def sadge(ctx) -> None:
     embed = discord.Embed(title='Sad', description=f'{ctx.author.name} is very sad :(', color=discord.Color.blue())
     await ctx.send(embed=embed)
     await ctx.message.delete()
 
 
 @client.command()
-async def laugh(ctx):
+async def laugh(ctx) -> None:
     await ctx.message.add_reaction("<:KEKW:936756232457449473>")
 
 
 @client.command()
-async def what(ctx):
+async def what(ctx) -> None:
     await ctx.message.add_reaction("<:youwhat:940030770645446706>")
 
 
-@client.command()
-async def restart(ctx):
-    if str(ctx.author.id) == "748609140896694394":
-        msg = await ctx.send("Restarting Bot...")
+@tree.command()
+async def restart(interaction) -> None:
+    if str(interaction.response.author.id) == "748609140896694394":
+        msg = await interaction.response.send_message("Restarting Bot...", ephemeral=True)
         await asyncio.sleep(3)
         await msg.delete()
         os.execv(sys.executable, ['python'] + sys.argv)
     else:
-        msg = await ctx.send("You don't have permission to use this command.")
+        msg = await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
         await asyncio.sleep(3)
         await msg.delete()
 
 
 @client.command(aliases=['eval', 'execute', 'exec'])
-async def evaluate(ctx, *, content):
+async def evaluate(ctx, *, content) -> None:
     if str(ctx.author.id) == "748609140896694394":
         msg = await exec(content)
         await asyncio.sleep(5)
@@ -264,57 +264,16 @@ async def evaluate(ctx, *, content):
 async def avatar(ctx, member: discord.Member = None):
     if member is None:
         embed = discord.Embed(title=f"{ctx.author.name}'s Avatar",
-                              url=str(ctx.author.avatar_url),
+                              url=str(ctx.author.display_avatar.url),
                               color=discord.Color.blue())
-        embed.set_image(url=str(ctx.author.avatar_url))
+        # noinspection PyUnresolvedReferences
+        embed.set_image(url=str(member.display_avatar.url))
     else:
         embed = discord.Embed(title=f"{member.name}'s Avatar",
-                              url=str(member.avatar_url),
+                              url=str(member.display_avatar.url),
                               color=discord.Color.blue())
-        embed.set_image(url=str(member.avatar_url))
+        embed.set_image(url=str(member.display_avatar.url))
     await ctx.send(embed=embed)
-
-
-@client.command()
-async def cat(ctx):
-    cats = requests.get("https://api.thecatapi.com/v1/images/search")
-    cat_arr = json.loads(cats.content)
-    embed = discord.Embed(title="AWW")
-    embed.set_image(url=cat_arr[0]["url"])
-    button = discord.ui.Button(label='Next', style=discord.ButtonStyle.green)
-
-    async def button_callback(interaction):
-        cats = requests.get("https://api.thecatapi.com/v1/images/search")
-        cat_arr = json.loads(cats.content)
-        embed = discord.Embed(title="AWW")
-        embed.set_image(url=cat_arr[0]["url"])
-        await interaction.response.edit_message(embed=embed)
-
-    button.callback = button_callback
-    view = discord.ui.View()
-    view.add_item(button)
-    await ctx.reply(embed=embed, mention_author=False, view=view)
-
-
-@client.command()
-async def dog(ctx):
-    dogs = requests.get("https://dog.ceo/api/breeds/image/random")
-    dog_arr = json.loads(dogs.content)
-    embed = discord.Embed(title="AWW")
-    embed.set_image(url=dog_arr["message"])
-    button = discord.ui.Button(label='Next', style=discord.ButtonStyle.green)
-
-    async def button_callback(interaction):
-        dogs = requests.get("https://dog.ceo/api/breeds/image/random")
-        dog_arr = json.loads(dogs.content)
-        embed = discord.Embed(title="AWW")
-        embed.set_image(url=dog_arr["message"])
-        await interaction.response.edit_message(embed=embed)
-
-    button.callback = button_callback
-    view = discord.ui.View()
-    view.add_item(button)
-    await ctx.reply(embed=embed, mention_author=False, view=view)
 
 
 @client.command()
@@ -356,105 +315,7 @@ async def kata(ctx, *, name):
         await ctx.send("Uh oh, something went wrong...")
 
 
-# Trying economy again...sigh
-
-async def open_account(user: discord.Member):
-    try:
-        post = {"_id": str(user.id), "Balance": 0}
-        await cluster.Botswag.Accounts.insert_one(post)
-    except:
-        pass
-
-
-@client.command(aliases=["bal"])
-async def balance(ctx):
-    await open_account(ctx.author)
-    stats = await cluster.Botswag.Accounts.find_one({"_id": str(ctx.author.id)})
-    embed = discord.Embed(description=f"You currently have ${stats['Balance']}.",
-                          color=discord.Color.green())
-    embed.set_author(name=f"{ctx.author.name.title()}'s Balance:", icon_url=ctx.author.avatar_url)
-    await ctx.send(embed=embed)
-
-
-@client.command(aliases=['swaggy', 'swagger'])
-@commands.cooldown(1, 30, commands.BucketType.user)
-async def swag(ctx):
-    await open_account(ctx.author)
-
-    swagger = ["Your fans give you $* for being a swag master.",
-               "You swagged so hard you forgot to breathe, and they paid you $* to stay alive.",
-               "When you step into the building, everybody's hands go up and stay there, and you take the opportunity to rob them all of a collective $*."]
-    money = random.randint(100, 500)
-
-    await cluster.Botswag.Accounts.update_one({"_id": str(ctx.author.id)}, {"$inc": {"Balance": money}})
-    embed = discord.Embed(description=random.choice(swagger).replace('*', str(money)),
-                          color=discord.Color.green())
-    embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
-    embed.set_footer(text="N.B. This command is under development. It may not work as expected",
-                     icon_url='https://cdn.discordapp.com/avatars/748609140896694394/216c2e4a3ab7574609c049a7d3ebbdaa.webp?size=1024')
-    await ctx.send(embed=embed)
-
-
-@client.command(aliases=["lend", "send"])
-async def give(ctx, user: discord.Member, amount):
-    await open_account(ctx.author)
-    await open_account(user)
-    print(str(user.id))
-
-    stats = await cluster.Botswag.Accounts.find_one({"_id": str(ctx.author.id)})
-
-    if not amount.isnumeric() and amount.lower() not in ["all", 'half']:
-        embed = discord.Embed(title="Invalid `amount` Argument Given",
-                              description="Your `amount` argument is unrecognised.",
-                              color=discord.Color.red())
-        embed.set_thumbnail(url="https://www.bing.com/images/blob?bcid=Tncj8lzDV-EDFPSHOUayPnCwk3lS.....3c")
-        embed.set_footer(text="N.B. This command is under development. It may not work as expected",
-                         icon_url='https://cdn.discordapp.com/avatars/748609140896694394/216c2e4a3ab7574609c049a7d3ebbdaa.webp?size=1024')
-        await ctx.send(embed=embed)
-        return
-
-    elif amount.isnumeric():
-        if int(amount) > stats['Balance'] or int(amount) <= 0:
-            embed = discord.Embed(title="Invalid `amount` Argument Given",
-                                  description="Your `amount` argument is either above your balance, 0 or below 0.",
-                                  color=discord.Color.red())
-            embed.set_thumbnail(url="https://www.bing.com/images/blob?bcid=Tncj8lzDV-EDFPSHOUayPnCwk3lS.....3c")
-            embed.set_footer(text="N.B. This command is under development. It may not work as expected",
-                             icon_url='https://cdn.discordapp.com/avatars/748609140896694394/216c2e4a3ab7574609c049a7d3ebbdaa.webp?size=1024')
-            await ctx.send(embed=embed)
-            return
-        else:
-            amount = int(amount)
-            await cluster.Botswag.Accounts.update_one({"_id": str(ctx.author.id)}, {"$inc": {"Balance": -amount}})
-            await cluster.Botswag.Accounts.update_one({"_id": str(user.id)}, {"$inc": {"Balance": amount}})
-
-    elif not amount.isnumeric():
-        if amount.lower() == 'all':
-            amount = stats['Balance']
-            await cluster.Botswag.Accounts.update_one({"_id": str(ctx.author.id)}, {"$inc": {"Balance": -amount}})
-            await cluster.Botswag.Accounts.update_one({"_id": str(user.id)}, {"$inc": {"Balance": amount}})
-        elif amount.lower() == 'half':
-            amount = stats['Balance'] // 2
-            await cluster.Botswag.Accounts.update_one({"_id": str(ctx.author.id)}, {"$inc": {"Balance": -amount}})
-            await cluster.Botswag.Accounts.update_one({"_id": str(user.id)}, {"$inc": {"Balance": amount}})
-
-    embed = discord.Embed(title="Sharing is Caring",
-                          description=f"You gave **{user.name}** ${amount}!",
-                          color=discord.Color.green())
-    embed.set_thumbnail(url="https://www.bing.com/images/blob?bcid=Tncj8lzDV-EDFPSHOUayPnCwk3lS.....3c")
-    embed.set_footer(text="N.B. This command is under development. It may not work as expected",
-                     icon_url='https://cdn.discordapp.com/avatars/748609140896694394/216c2e4a3ab7574609c049a7d3ebbdaa.webp?size=1024')
-    await ctx.send(embed=embed)
-
 # Command Errors
-@swag.error
-async def swag_error(ctx, error):
-    if isinstance(error, commands.CommandOnCooldown):
-        em = discord.Embed(title=f"Command On Cooldown", description=f"Try again in {error.retry_after:.2f}s.",
-                           color=discord.Color.red())
-        await ctx.send(embed=em)
-
-
 @math.error
 async def math_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
